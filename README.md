@@ -13,8 +13,7 @@ npm install resty
 ```typescript
 // file: src/pages/api/users.ts
 
-import { Response, HttpStatus } from "resty";
-import { post, get, handle } from "resty/next";
+import { Response, HttpStatus, post, get, handle } from "resty";
 import { prisma } from "src/db";
 
 const postUser = post(async (request) => {
@@ -47,7 +46,7 @@ Or
 ```typescript
 // file: src/pages/api/users.ts
 
-import { pageConfig } from "resty/next";
+import { pageConfig } from "resty";
 
 export const config = pageConfig();
 ```
@@ -61,8 +60,7 @@ Mostly, this is syntactic sugar. But it also provides a way for you to separate 
 ```typescript
 // file: src/rest/postUser.ts
 
-import { Response, HttpStatus } from "resty";
-import { post } from "resty/next";
+import { Response, HttpStatus, post } from "resty";
 
 export const postUser = post(async (request) => {
   // ... some logic
@@ -75,7 +73,7 @@ And then in your actual api route:
 ```typescript
 // file: src/routes/api/users.ts
 
-import { handle } from "resty/next";
+import { handle } from "resty";
 import { postUser } from "src/rest/postUser";
 
 export default handle(postUser);

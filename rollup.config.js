@@ -1,47 +1,33 @@
 import dts from "rollup-plugin-dts";
 import esbuild from "rollup-plugin-esbuild";
 
+const name = require("./package.json").main.replace(/\.js$/, "");
+
 const bundle = (config) => ({
+  ...config,
   input: "src/index.ts",
   external: (id) => !/^[./]/.test(id),
-  ...config,
 });
 
-const files = [
-  { input: "index", output: "resty" },
-  { input: "next", output: "next" },
-];
-
-const bundles = [];
-
-files.forEach(({ input, output }) => {
-  bundles.push(
-    bundle({
-      input: `src/${input}.ts`,
-      plugins: [esbuild()],
-      output: [
-        {
-          file: `dist/${output}.js`,
-          format: "cjs",
-        },
-        {
-          file: `dist/${output}.mjs`,
-          format: "es",
-        },
-      ],
-    }),
-  );
-
-  bundles.push(
-    bundle({
-      input: `src/${input}.ts`,
-      plugins: [dts()],
-      output: {
-        file: `dist/${output}.d.ts`,
+export default [
+  bundle({
+    plugins: [esbuild()],
+    output: [
+      {
+        file: `${name}.js`,
+        format: "cjs",
+      },
+      {
+        file: `${name}.mjs`,
         format: "es",
       },
-    }),
-  );
-});
-
-export default bundles;
+    ],
+  }),
+  bundle({
+    plugins: [dts()],
+    output: {
+      file: `${name}.d.ts`,
+      format: "es",
+    },
+  }),
+];

@@ -5,16 +5,6 @@
   "main": "dist/resty.js",
   "module": "dist/resty.mjs",
   "typings": "dist/resty.d.ts",
-  "exports": {
-    "./": {
-      "import": "./dist/resty.mjs",
-      "require": "./dist/resty.js"
-    },
-    "./next": {
-      "import": "./dist/next.mjs",
-      "require": "./dist/next.js"
-    }
-  },
   "files": [
     "dist"
   ],
