@@ -1,4 +1,4 @@
-import { Headers, ReadonlyHeaders } from "../headers";
+import { Headers, ReadonlyHeaders } from "../core";
 
 describe("Headers", () => {
   describe(".keys()", () => {

@@ -1,6 +1,6 @@
 import { IncomingHttpHeaders } from "http";
 
-import { isPlainObject } from "./util";
+import { isPlainObject } from "../util";
 
 export type HeadersInit =
   | Array<[string, string]>
@@ -99,7 +99,7 @@ export class ReadonlyHeaders extends Headers {
   }
 }
 
-export function fromIncomingHTTPHeaders<T extends IncomingHttpHeaders>(
+export function fromIncomingHttpHeaders<T extends IncomingHttpHeaders>(
   headers: T,
 ): ReadonlyHeaders {
   const entries: Array<[string, string]> = [];

@@ -7,7 +7,7 @@ import { URL, URLSearchParams } from "url";
 import {
   HeadersInit,
   ReadonlyHeaders,
-  fromIncomingHTTPHeaders,
+  fromIncomingHttpHeaders,
 } from "./headers";
 import { HttpError } from "./error";
 
@@ -34,7 +34,7 @@ export class Request {
 
   public static from<T extends IncomingMessage>(req: T): Request {
     const url = `http://${req.headers.origin}${req.url}`;
-    const headers = fromIncomingHTTPHeaders(req.headers);
+    const headers = fromIncomingHttpHeaders(req.headers);
     const method = String(req.method);
     return new Request(url, {
       body: req,
@@ -59,9 +59,9 @@ export class Request {
   }
 
   public async blob(): Promise<Blob> {
-    const ct = this.headers.get("content-type") ?? "";
+    const type = this.headers.get("content-type") ?? "";
     const buf = await this.buffer();
-    return new Blob([buf], { type: ct });
+    return new Blob([buf], { type });
   }
 
   public async buffer(): Promise<Buffer> {

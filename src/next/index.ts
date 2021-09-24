@@ -1,11 +1,14 @@
 import type { IncomingMessage } from "http";
 import type { NextApiRequest, NextApiResponse, PageConfig } from "next";
-import { StatusCodes } from "http-status-codes";
 import { URLSearchParams } from "url";
 
-import { Request } from "./request";
-import { RequestHandler, resolve } from "./resolver";
-import { Response } from "./response";
+import {
+  HttpStatus,
+  Request,
+  RequestHandler,
+  Response,
+  resolve,
+} from "../core";
 
 interface Route {
   handler: RequestHandler;
@@ -16,7 +19,7 @@ export const handle =
   (...routes: Route[]) =>
   async (req: NextApiRequest, res: NextApiResponse): Promise<void> => {
     const route = routes.find((route) => route.matches(req));
-    if (!route) return res.status(StatusCodes.NOT_FOUND).end();
+    if (!route) return res.status(HttpStatus.NOT_FOUND).end();
     let response: Response;
 
     try {

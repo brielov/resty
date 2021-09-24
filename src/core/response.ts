@@ -1,27 +1,26 @@
 import { Readable } from "stream";
 import { ServerResponse } from "http";
-import { StatusCodes, getReasonPhrase } from "http-status-codes";
 
 import { Headers, HeadersInit } from "./headers";
 import { HttpError } from "./error";
-import { HttpStatus } from ".";
+import { HttpStatus, getReasonPhrase } from "./status";
 
-type InitRecord = { status?: StatusCodes; headers?: HeadersInit };
-type ResponseInit = StatusCodes | InitRecord;
+type InitRecord = { status?: HttpStatus; headers?: HeadersInit };
+type ResponseInit = HttpStatus | InitRecord;
 
 export class Response {
   readonly body: unknown;
   readonly headers: Headers;
-  readonly status: StatusCodes;
+  readonly status: HttpStatus;
 
-  private constructor(body: unknown, headers: Headers, status: StatusCodes) {
+  private constructor(body: unknown, headers: Headers, status: HttpStatus) {
     this.body = body;
     this.headers = headers;
     this.status = status;
   }
 
   public static fromError(err: unknown): Response {
-    let status: StatusCodes;
+    let status: HttpStatus;
     let errors: unknown[] = [];
     let message = "";
 
@@ -30,10 +29,10 @@ export class Response {
       message = err.message;
       errors = err.errors.slice();
     } else if (err instanceof Error) {
-      status = StatusCodes.INTERNAL_SERVER_ERROR;
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
       message = err.message;
     } else {
-      status = StatusCodes.INTERNAL_SERVER_ERROR;
+      status = HttpStatus.INTERNAL_SERVER_ERROR;
       message = getReasonPhrase(status);
     }
 
@@ -60,7 +59,7 @@ export class Response {
   }
 
   public static empty(
-    status: StatusCodes = StatusCodes.OK,
+    status: HttpStatus = HttpStatus.OK,
     headers?: HeadersInit,
   ): Response {
     const _headers = new Headers(headers);
@@ -102,10 +101,10 @@ function getInit(init?: ResponseInit): {
   status: HttpStatus;
   headers: Headers;
 } {
-  if (!init) return { status: StatusCodes.OK, headers: new Headers() };
+  if (!init) return { status: HttpStatus.OK, headers: new Headers() };
   if (typeof init === "number") return { status: init, headers: new Headers() };
   return {
-    status: init.status ?? StatusCodes.OK,
+    status: init.status ?? HttpStatus.OK,
     headers: new Headers(init.headers),
   };
 }

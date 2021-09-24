@@ -2,8 +2,7 @@ import { Readable, Stream } from "stream";
 import { Response as ServerResponse } from "mock-http";
 import { StatusCodes, getReasonPhrase } from "http-status-codes";
 
-import { HttpError } from "../error";
-import { Response } from "../response";
+import { HttpError, Response } from "../core";
 
 describe("Response", () => {
   describe(".json()", () => {

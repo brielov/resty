@@ -1,6 +1,6 @@
 import { MockRequestOptions, Request as IncomingMessage } from "mock-http";
 
-import { Request } from "../request";
+import { Request } from "../core";
 
 export function build(options?: MockRequestOptions): Request {
   const req = new IncomingMessage(options);

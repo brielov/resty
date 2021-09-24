@@ -3,7 +3,7 @@ import {
   Response as ServerResponse,
 } from "mock-http";
 
-import { Response } from "../response";
+import { Response } from "../core";
 import { del, get, handle, patch, post } from "../next";
 
 const handler = handle(
