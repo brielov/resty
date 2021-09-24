@@ -100,7 +100,6 @@ const handler: NextApiHandler = (req, res) => {
 ### Request
 
 - `.arrayBuffer(): Promise<ArrayBuffer>`
-- `.blob(): Promise<Blob>`
 - `.buffer(): Promise<Buffer>`
 - `.formData(): Promise<URLSearchParams>`
 - `.json(): Promise<unknown>`

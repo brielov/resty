@@ -1,7 +1,5 @@
-import { Blob } from "buffer";
 import { IncomingMessage } from "http";
 import { PassThrough, Readable } from "stream";
-import { StatusCodes } from "http-status-codes";
 import { URL, URLSearchParams } from "url";
 
 import {
@@ -10,6 +8,7 @@ import {
   fromIncomingHttpHeaders,
 } from "./headers";
 import { HttpError } from "./error";
+import { HttpStatus } from "./status";
 
 interface RequestInit {
   method: string;
@@ -22,8 +21,8 @@ export class Request {
   public readonly headers: ReadonlyHeaders;
   public readonly url: URL;
 
-  #bodyUsed = false;
   #body: Readable;
+  #bodyUsed = false;
 
   private constructor(input: string, init: RequestInit) {
     this.url = new URL(input);
@@ -58,12 +57,6 @@ export class Request {
     return buffer.slice(byteOffset, byteOffset + byteLength);
   }
 
-  public async blob(): Promise<Blob> {
-    const type = this.headers.get("content-type") ?? "";
-    const buf = await this.buffer();
-    return new Blob([buf], { type });
-  }
-
   public async buffer(): Promise<Buffer> {
     if (this.method === "GET" || this.method === "HEAD") {
       throw new Error("Request with GET/HEAD method cannot have body");
@@ -86,7 +79,7 @@ export class Request {
         .get("content-type")
         .includes("application/x-www-form-urlencoded")
     ) {
-      throw new HttpError(StatusCodes.UNSUPPORTED_MEDIA_TYPE, [
+      throw new HttpError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, [
         "only `x-www-form-urlencoded` content type is supported",
       ]);
     }
@@ -96,7 +89,7 @@ export class Request {
 
   public async json(): Promise<unknown> {
     if (!this.headers.get("content-type").includes("application/json")) {
-      throw new HttpError(StatusCodes.UNSUPPORTED_MEDIA_TYPE, [
+      throw new HttpError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, [
         "content-type header must be of type `application/json`",
       ]);
     }
@@ -106,7 +99,7 @@ export class Request {
     try {
       return JSON.parse(text);
     } catch (err) {
-      throw new HttpError(StatusCodes.BAD_REQUEST, ["malformed JSON body"]);
+      throw new HttpError(HttpStatus.BAD_REQUEST, ["malformed JSON body"]);
     }
   }
 
