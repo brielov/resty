@@ -12,40 +12,24 @@ import {
 import { HttpError } from "./error";
 
 interface RequestInit {
-  method?: string;
-  headers?: HeadersInit;
-  body?: Readable | Buffer | string;
+  method: string;
+  headers: HeadersInit;
+  body: Readable;
 }
 
-const INTERNALS = Symbol("Request internals");
 export class Request {
   public readonly method: string;
   public readonly headers: ReadonlyHeaders;
   public readonly url: URL;
 
   #bodyUsed = false;
+  #body: Readable;
 
-  private [INTERNALS]: Readable;
-
-  private constructor(input: string | Request, init: RequestInit = {}) {
-    if (input instanceof Request) {
-      this.url = input.url;
-      this.headers = new ReadonlyHeaders(init.headers ?? input.headers);
-      this.method = init.method?.toUpperCase() ?? input.method;
-      this[INTERNALS] = clone(input);
-    } else {
-      this.url = new URL(input);
-      this.headers = new ReadonlyHeaders(init.headers);
-      this.method = init.method?.toUpperCase() ?? "GET";
-
-      if (init.body instanceof Readable) {
-        this[INTERNALS] = init.body;
-      } else if (Buffer.isBuffer(init.body) || typeof init.body === "string") {
-        this[INTERNALS] = Readable.from(init.body);
-      } else {
-        this[INTERNALS] = Readable.from("");
-      }
-    }
+  private constructor(input: string, init: RequestInit) {
+    this.url = new URL(input);
+    this.headers = new ReadonlyHeaders(init.headers);
+    this.method = init.method?.toUpperCase() ?? "GET";
+    this.#body = init.body;
   }
 
   public static from<T extends IncomingMessage>(req: T): Request {
@@ -60,7 +44,9 @@ export class Request {
   }
 
   get body(): Readable {
-    return this[INTERNALS];
+    const stream = new PassThrough();
+    this.#body.pipe(stream);
+    return stream;
   }
 
   get bodyUsed(): boolean {
@@ -90,12 +76,8 @@ export class Request {
     this.#bodyUsed = true;
 
     const chunks: Buffer[] = [];
-    for await (const chunk of this[INTERNALS]) chunks.push(chunk);
+    for await (const chunk of this.#body) chunks.push(chunk);
     return Buffer.concat(chunks);
-  }
-
-  public clone(): Request {
-    return new Request(this);
   }
 
   public async formData(): Promise<URLSearchParams> {
@@ -132,17 +114,4 @@ export class Request {
     const buf = await this.buffer();
     return buf.toString("utf-8");
   }
-}
-
-function clone(instance: Request): Readable {
-  if (instance.bodyUsed) {
-    throw new Error("Cannot clone body after it is used");
-  }
-  const body = instance[INTERNALS];
-  const p1 = new PassThrough();
-  const p2 = new PassThrough();
-  body.pipe(p1);
-  body.pipe(p2);
-  instance[INTERNALS] = p1;
-  return p2;
 }
