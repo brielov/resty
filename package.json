@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "build": "rimraf dist && rollup -c",
-    "postinstall": "is-ci || husky install",
+    "_postinstall": "is-ci || husky install",
     "postpublish": "pinst --enable",
     "prepare": "npm run build",
     "prepublishOnly": "pinst --disable",
