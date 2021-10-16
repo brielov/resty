@@ -1,6 +1,6 @@
 {
   "name": "resty",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "Syntactic sugar for your rest api",
   "main": "dist/resty.js",
   "module": "dist/resty.mjs",
