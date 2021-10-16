@@ -1,13 +1,13 @@
 import { Request } from "./request";
 import { Response } from "./response";
 
-export type RequestHandler = (
+export type RequestHandler<T = unknown> = (
   request: Request,
-) => Response | PromiseLike<Response>;
+) => Response<T> | PromiseLike<Response<T>>;
 
-export async function resolve(
+export async function resolve<T = unknown>(
   request: Request,
-  handler: RequestHandler,
+  handler: RequestHandler<T>,
 ): Promise<Response> {
   let response: Response;
 

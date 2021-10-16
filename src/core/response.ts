@@ -1,22 +1,45 @@
 import { Readable } from "stream";
 import { ServerResponse } from "http";
 
-import { Headers, HeadersInit } from "./headers";
 import { HttpError } from "./error";
 import { HttpStatus, getReasonPhrase } from "./status";
 
-type InitRecord = { status?: HttpStatus; headers?: HeadersInit };
-type ResponseInit = HttpStatus | InitRecord;
+interface ResponseInit {
+  status?: HttpStatus;
+  headers?: ReadonlyArray<[string, string]>;
+}
 
-export class Response {
-  readonly body: unknown;
-  readonly headers: Headers;
-  readonly status: HttpStatus;
+export class Response<T = unknown> {
+  private constructor(
+    public readonly body: T,
+    public readonly status: number = 200,
+    public readonly headers: ReadonlyArray<[string, string]> = [],
+  ) {}
 
-  private constructor(body: unknown, headers: Headers, status: HttpStatus) {
-    this.body = body;
-    this.headers = headers;
-    this.status = status;
+  public static json<T>(serializable: T, init?: ResponseInit): Response<T> {
+    return new Response(serializable, init?.status, init?.headers);
+  }
+
+  public static buffer(buf: Buffer, init?: ResponseInit): Response<Buffer> {
+    return new Response(buf, init?.status, init?.headers);
+  }
+
+  public static stream(
+    readable: Readable,
+    init?: ResponseInit,
+  ): Response<Readable> {
+    return new Response(readable, init?.status, init?.headers);
+  }
+
+  public static text(str: string, init?: ResponseInit): Response<string> {
+    return new Response(str, init?.status, init?.headers);
+  }
+
+  public static empty(
+    status?: HttpStatus,
+    headers?: ReadonlyArray<[string, string]>,
+  ): Response<null> {
+    return new Response(null, status, headers);
   }
 
   public static fromError(err: unknown): Response {
@@ -36,75 +59,59 @@ export class Response {
       message = getReasonPhrase(status);
     }
 
-    return Response.json({ status, message, errors }, status);
-  }
-
-  public static json(data: unknown, init?: ResponseInit): Response {
-    const { headers, status } = getInit(init);
-    const body = JSON.stringify(data);
-    headers.set("content-length", String(Buffer.byteLength(body)));
-    if (!headers.has("content-type")) {
-      headers.set("content-type", "application/json; charset=utf-8");
-    }
-    return new Response(body, headers, status);
-  }
-
-  public static text(data: string, init?: ResponseInit): Response {
-    const { headers, status } = getInit(init);
-    headers.set("content-length", String(Buffer.byteLength(data)));
-    if (!headers.has("content-type")) {
-      headers.set("content-type", "text/plain");
-    }
-    return new Response(data, headers, status);
-  }
-
-  public static empty(
-    status: HttpStatus = HttpStatus.OK,
-    headers?: HeadersInit,
-  ): Response {
-    const _headers = new Headers(headers);
-    _headers.set("content-length", "0");
-    return new Response(null, _headers, status);
-  }
-
-  public static buffer(buf: Buffer, init?: ResponseInit): Response {
-    const { headers, status } = getInit(init);
-    headers.set("content-length", String(buf.length));
-    if (!headers.has("content-type")) {
-      headers.set("content-type", "application/octet-stream");
-    }
-    return new Response(buf, headers, status);
-  }
-
-  public static stream(readable: Readable, init?: ResponseInit): Response {
-    const { headers, status } = getInit(init);
-    if (!headers.has("content-type")) {
-      headers.set("content-type", "application/octet-stream");
-    }
-    return new Response(readable, headers, status);
+    return Response.json({ status, message, errors }, { status });
   }
 
   public pipe<T extends ServerResponse>(res: T): void {
-    const { body, headers, status } = this;
-    res.statusCode = status;
-    headers.forEach((value, key) => res.setHeader(key, value));
-    if (!body) return res.end();
+    res.statusCode = this.status;
+
+    for (const [key, value] of this.headers) {
+      res.setHeader(key.toLowerCase(), String(value));
+    }
+
+    const { body } = this;
+
+    if (body === null) {
+      res.end();
+      return;
+    }
+
     if (body instanceof Readable) {
+      if (!res.hasHeader("content-type")) {
+        res.setHeader("content-type", "application/octet-stream");
+      }
       body.pipe(res);
       return;
     }
-    res.end(body);
-  }
-}
 
-function getInit(init?: ResponseInit): {
-  status: HttpStatus;
-  headers: Headers;
-} {
-  if (!init) return { status: HttpStatus.OK, headers: new Headers() };
-  if (typeof init === "number") return { status: init, headers: new Headers() };
-  return {
-    status: init.status ?? HttpStatus.OK,
-    headers: new Headers(init.headers),
-  };
+    let str: string;
+
+    if (Buffer.isBuffer(body)) {
+      if (!res.hasHeader("content-type")) {
+        res.setHeader("content-type", "application/octet-stream");
+      }
+      res.setHeader("content-length", String(body.length));
+      res.end(body);
+      return;
+    }
+
+    if (typeof body === "object" || typeof body === "number") {
+      str = JSON.stringify(body);
+
+      if (!res.hasHeader("content-type")) {
+        res.setHeader("content-type", "application/json; charset=utf-8");
+      }
+    } else if (typeof body === "string") {
+      str = body;
+    } else {
+      str = "";
+    }
+
+    if (!res.hasHeader("content-type")) {
+      res.setHeader("content-type", "text/plain");
+    }
+
+    res.setHeader("content-length", String(Buffer.byteLength(str)));
+    res.end(str);
+  }
 }

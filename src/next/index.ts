@@ -1,6 +1,5 @@
 import type { IncomingMessage } from "http";
 import type { NextApiRequest, NextApiResponse, PageConfig } from "next";
-import { URLSearchParams } from "url";
 
 import {
   HttpStatus,
@@ -10,10 +9,12 @@ import {
   resolve,
 } from "../core";
 
-interface Route {
-  handler: RequestHandler;
+interface Route<T = unknown> {
+  handler: RequestHandler<T>;
   matches<T extends IncomingMessage>(req: T): boolean;
 }
+
+export type InferRoute<T> = T extends Route<infer U> ? U : unknown;
 
 export const handle =
   (...routes: Route[]) =>
@@ -24,7 +25,6 @@ export const handle =
 
     try {
       const request = Request.from(req);
-      request.url.search = queryToSearch(req.query);
       response = await resolve(request, route.handler);
     } catch (err) {
       response = Response.fromError(err);
@@ -43,7 +43,7 @@ export const pageConfig = (config?: PageConfig): PageConfig => ({
 
 const withMethod =
   (method: string) =>
-  (handler: RequestHandler): Route => ({
+  <T>(handler: RequestHandler<T>): Route<T> => ({
     handler,
     matches: (req) => req.method === method,
   });
@@ -56,15 +56,3 @@ export const options = withMethod("OPTIONS");
 export const patch = withMethod("PATCH");
 export const post = withMethod("POST");
 export const put = withMethod("PUT");
-
-const queryToSearch = (query: NextApiRequest["query"]): string => {
-  const params = new URLSearchParams();
-  for (const [key, value] of Object.entries(query)) {
-    if (Array.isArray(value)) {
-      value.forEach((v) => params.append(key, v));
-    } else {
-      params.append(key, value);
-    }
-  }
-  return params.toString();
-};

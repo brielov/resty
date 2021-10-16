@@ -101,7 +101,6 @@ const handler: NextApiHandler = (req, res) => {
 
 - `.arrayBuffer(): Promise<ArrayBuffer>`
 - `.buffer(): Promise<Buffer>`
-- `.formData(): Promise<URLSearchParams>`
 - `.json(): Promise<unknown>`
 - `.text(): Promise<text>`
 

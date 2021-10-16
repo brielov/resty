@@ -4,16 +4,12 @@ describe("Request", () => {
   describe(".from()", () => {
     it("parses params correctly", () => {
       const request = build({ url: "/?foo=bar" });
-      expect(request.url.searchParams.get("foo")).toEqual("bar");
+      expect(request.query.foo).toEqual("bar");
     });
 
     it("parses headers correctly", () => {
       const request = build({ headers: { Authorization: "Bearer token" } });
-      expect(request.headers.get("authorization")).toEqual("Bearer token");
-    });
-
-    it("sets bodyUsed to false", () => {
-      expect(build().bodyUsed).toBe(false);
+      expect(request.headers.authorization).toEqual("Bearer token");
     });
   });
 
@@ -30,13 +26,6 @@ describe("Request", () => {
       const buf = Buffer.from("foo bar");
       const request = build({ buffer: buf, method: "POST" });
       return expect(request.buffer()).resolves.toEqual(buf);
-    });
-
-    it("sets bodyUsed to true", async () => {
-      const buf = Buffer.from("foo bar");
-      const request = build({ buffer: buf, method: "POST" });
-      await request.buffer();
-      expect(request.bodyUsed).toBe(true);
     });
   });
 
@@ -64,15 +53,6 @@ describe("Request", () => {
   });
 
   describe(".json()", () => {
-    it("throws an error when content-type is not `application/json`", () => {
-      const request = build({
-        buffer: Buffer.from(JSON.stringify({ foo: "bar" })),
-        method: "POST",
-      });
-
-      return expect(request.json()).rejects.toThrow("Unsupported Media Type");
-    });
-
     it("parses the body as json", () => {
       const request = build({
         buffer: Buffer.from(JSON.stringify({ foo: "bar" })),

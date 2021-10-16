@@ -1,110 +1,83 @@
-import { IncomingMessage } from "http";
-import { PassThrough, Readable } from "stream";
-import { URL, URLSearchParams } from "url";
+import { IncomingHttpHeaders, IncomingMessage } from "http";
+import { NextApiRequest } from "next";
+import { ParsedUrlQuery, parse } from "querystring";
+import { Writable } from "stream";
 
-import {
-  HeadersInit,
-  ReadonlyHeaders,
-  fromIncomingHttpHeaders,
-} from "./headers";
-import { HttpError } from "./error";
-import { HttpStatus } from "./status";
+type Incoming = IncomingMessage | NextApiRequest;
 
-interface RequestInit {
-  method: string;
-  headers: HeadersInit;
-  body: Readable;
-}
+export class Request<T extends Incoming = IncomingMessage> {
+  private cache = new WeakMap<T, Buffer>();
 
-export class Request {
-  public readonly method: string;
-  public readonly headers: ReadonlyHeaders;
-  public readonly url: URL;
+  private constructor(
+    private readonly req: T,
+    public readonly method: string,
+    public readonly path: string,
+    public readonly headers: Readonly<IncomingHttpHeaders>,
+    public readonly query: Readonly<ParsedUrlQuery>,
+  ) {}
 
-  #body: Readable;
-  #bodyUsed = false;
-
-  private constructor(input: string, init: RequestInit) {
-    this.url = new URL(input);
-    this.headers = new ReadonlyHeaders(init.headers);
-    this.method = init.method?.toUpperCase() ?? "GET";
-    this.#body = init.body;
-  }
-
-  public static from<T extends IncomingMessage>(req: T): Request {
-    const url = `http://${req.headers.origin}${req.url}`;
-    const headers = fromIncomingHttpHeaders(req.headers);
+  public static from<T extends Incoming>(req: T): Request<T> {
     const method = String(req.method);
-    return new Request(url, {
-      body: req,
-      headers,
-      method,
-    });
+    const [path = "/", query = ""] = String(req.url).split("?");
+    return "query" in req
+      ? new Request(req, method, path, req.headers, req.query)
+      : new Request(req, method, path, req.headers, parse(query));
   }
 
-  get body(): Readable {
-    const stream = new PassThrough();
-    this.#body.pipe(stream);
-    return stream;
+  /**
+   * Read Request's body as Buffer
+   * @returns Promise<Buffer>
+   */
+  public async buffer(): Promise<Buffer> {
+    if (this.method === "GET" || this.method === "HEAD") {
+      throw new Error("Request with GET/HEAD method cannot have body");
+    }
+    if (this.cache.has(this.req)) {
+      return this.cache.get(this.req) as Buffer;
+    }
+    const chunks: Buffer[] = [];
+    for await (const chunk of this.req) chunks.push(chunk);
+    const buf = Buffer.concat(chunks);
+    this.cache.set(this.req, buf);
+    return buf;
   }
 
-  get bodyUsed(): boolean {
-    return this.#bodyUsed;
-  }
-
+  /**
+   * Read Request's body as ArrayBuffer
+   * @returns Promise<unknown>
+   */
   public async arrayBuffer(): Promise<ArrayBuffer> {
     const { buffer, byteOffset, byteLength } = await this.buffer();
     return buffer.slice(byteOffset, byteOffset + byteLength);
   }
 
-  public async buffer(): Promise<Buffer> {
-    if (this.method === "GET" || this.method === "HEAD") {
-      throw new Error("Request with GET/HEAD method cannot have body");
-    }
-
-    if (this.#bodyUsed) {
-      throw new Error("Body already used");
-    }
-
-    this.#bodyUsed = true;
-
-    const chunks: Buffer[] = [];
-    for await (const chunk of this.#body) chunks.push(chunk);
-    return Buffer.concat(chunks);
-  }
-
-  public async formData(): Promise<URLSearchParams> {
-    if (
-      !this.headers
-        .get("content-type")
-        .includes("application/x-www-form-urlencoded")
-    ) {
-      throw new HttpError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, [
-        "only `x-www-form-urlencoded` content type is supported",
-      ]);
-    }
-    const text = await this.text();
-    return new URLSearchParams(text);
-  }
-
-  public async json(): Promise<unknown> {
-    if (!this.headers.get("content-type").includes("application/json")) {
-      throw new HttpError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, [
-        "content-type header must be of type `application/json`",
-      ]);
-    }
-
-    const text = await this.text();
-
-    try {
-      return JSON.parse(text);
-    } catch (err) {
-      throw new HttpError(HttpStatus.BAD_REQUEST, ["malformed JSON body"]);
-    }
-  }
-
+  /**
+   * Read Request's body as string
+   * @returns Promise<string>
+   */
   public async text(): Promise<string> {
     const buf = await this.buffer();
     return buf.toString("utf-8");
+  }
+
+  /**
+   * Read Request's body as JSON
+   * @param reviver (key: string, value: unknown) => unknown
+   * @returns Promise<unknown>
+   */
+  public async json(
+    reviver?: (key: string, value: unknown) => unknown,
+  ): Promise<unknown> {
+    const str = await this.text();
+    return JSON.parse(str, reviver);
+  }
+
+  /**
+   * Pipe Request to a Writable stream
+   * @param destination Writable
+   * @returns Writable
+   */
+  public pipe(destination: Writable): Writable {
+    return this.req.pipe(destination);
   }
 }

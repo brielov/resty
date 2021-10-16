@@ -1,5 +1,3 @@
-export type { HeadersInit } from "./headers";
-export { Headers, ReadonlyHeaders } from "./headers";
 export { HttpError } from "./error";
 export { HttpStatus } from "./status";
 export { Request } from "./request";
