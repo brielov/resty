@@ -86,7 +86,7 @@ const tokenType = T.object({
   exp: T.number,
 });
 
-export type TokenType = T.Infer<typeof tokenType>;
+export type Token = T.Infer<typeof tokenType>;
 
 export const authenticate = (request: Request): Token => {
   const token = request.headers.authorization?.replace("Bearer ", "");
@@ -122,7 +122,7 @@ import { get, Response } from 'resty';
 import * as T from 'typed';
 
 const queryType = T.object({
-  id: T.number,
+  id: T.asNumber,
   take: T.defaulted(T.asNumber 5),
   skip: T.defaulted(T.asNumber, 0),
 });
