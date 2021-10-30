@@ -12,7 +12,7 @@
 
 Note that at the time of writing `resty` has not been fully tested in the real world and is not recommended for production use (yet). You can play around with it on small, personal projects and report any issues you find until it becomes stable enough to be taken seriously.
 
-As you see in some of the examples below, `resty` and [prisma](https://prisma.io) play very well together.
+As you see in some of the examples below, `resty` and [prisma](https://prisma.io) play very well together due to the nature of being type-safe and declarative.
 
 ## Installation
 
@@ -176,3 +176,19 @@ fileInput.addEventListener("change", async (event) => {
 ```
 
 This won't even touch your server hard drives, it will stream the incoming file directly to S3 and return a URL to the file. I know is hacky but it works.
+
+## Body size limits
+
+You can tell `resty` to limit the size of the body of a request. This is useful for preventing DoS attacks.
+If the body is larger than the limit, a 413 "Payload Too Large" error is returned. (Default is 10MB)
+
+```typescript
+const postMovie = post("/movies", async (request) => {
+  // This uses the `bytes` library internally. So you can use values like "1mb" or "10kb" or a plain number.
+  // Keep in mind that this should be set before the body is parsed.
+  request.maxBodySize = "1mb";
+  const data = await request.json(movieType);
+  const movie = await prisma.movie.create({ data });
+  return Response.json(movie, { status: HttpStatus.CREATED });
+});
+```
