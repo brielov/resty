@@ -4,7 +4,8 @@ import { ParsedUrlQuery, parse } from "querystring";
 import { Typed, fold } from "typed";
 import { Writable } from "stream";
 
-import { HttpError, HttpStatus } from ".";
+import { HttpError } from "./error";
+import { HttpStatus } from "./status";
 import { foldBadRequest, identity } from "./util";
 
 const DEFAULT_BODY_SIZE = 1024 * 1024 * 10;
