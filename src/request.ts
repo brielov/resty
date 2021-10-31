@@ -8,11 +8,11 @@ import { HttpError } from "./error";
 import { HttpStatus } from "./status";
 import { foldBadRequest, identity } from "./util";
 
-const DEFAULT_BODY_SIZE = 1024 * 1024 * 10;
+const DEFAULT_BODY_SIZE = 1024 * 1024 * 2;
 
 export class Request {
-  private cache = new WeakMap<IncomingMessage, Buffer>();
-  private _maxBodySize = DEFAULT_BODY_SIZE;
+  #buffer?: Buffer;
+  #maxBodySize = DEFAULT_BODY_SIZE;
 
   private constructor(
     private readonly req: IncomingMessage,
@@ -29,11 +29,11 @@ export class Request {
   }
 
   get maxBodySize(): number {
-    return this._maxBodySize;
+    return this.#maxBodySize;
   }
 
   set maxBodySize(size: number | string) {
-    this._maxBodySize = bytes.parse(size) ?? DEFAULT_BODY_SIZE;
+    this.#maxBodySize = bytes.parse(size) ?? DEFAULT_BODY_SIZE;
   }
 
   /**
@@ -50,21 +50,22 @@ export class Request {
     if (this.method === "GET" || this.method === "HEAD") {
       throw new Error("Cannot read body from GET/HEAD request");
     }
-    if (this.cache.has(this.req)) {
-      return this.cache.get(this.req) as Buffer;
+    if (this.#buffer) {
+      return this.#buffer;
     }
     const chunks: Buffer[] = [];
     let bytesRead = 0;
     for await (const chunk of this.req) {
       bytesRead += chunk.length;
       if (bytesRead > this.maxBodySize) {
-        throw new HttpError(HttpStatus.REQUEST_TOO_LONG);
+        throw new HttpError(HttpStatus.REQUEST_TOO_LONG, [
+          `Body size cannot be larger than ${bytes.format(this.#maxBodySize)}`,
+        ]);
       }
       chunks.push(chunk);
     }
-    const buf = Buffer.concat(chunks);
-    this.cache.set(this.req, buf);
-    return buf;
+    this.#buffer = Buffer.concat(chunks);
+    return this.#buffer;
   }
 
   /**
@@ -92,13 +93,16 @@ export class Request {
       const json = JSON.parse(str);
       return fold(type(json), foldBadRequest, identity);
     } catch (err) {
-      if (err instanceof HttpError) {
-        throw err;
+      if (err instanceof SyntaxError) {
+        throw new HttpError(HttpStatus.BAD_REQUEST, [err.message]);
       }
-      throw new HttpError(HttpStatus.BAD_REQUEST, ["Malformed JSON"]);
+      throw err;
     }
   }
 
+  /**
+   * Pipe the original `IncomingMessage` to the given `Writable` stream
+   */
   public pipe(writable: Writable): Writable {
     return this.req.pipe(writable);
   }

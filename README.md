@@ -2,17 +2,17 @@
 
 > Syntactic sugar for [RESTful](http://restful.info) APIs.
 
-`resty` is a very thin layer on top of Node's http module that provides a beautiful, simple, and easy to use API for building RESTful APIs. It is mostly syntactic sugar for the Node http module, but it also provides a few additional features:
+`resty` adds a very thin layer on top of Node's core http module that provides a beautiful, simple, and easy to use API for building RESTful APIs. It is mostly syntactic sugar, but it also provides a few additional features.
 
-- A radix-tree based routing system that allows you to define routes in a declarative way.
-- A simple and powerful way to validate request parameters and JSON payloads using [typed](https://github.com/brielov/typed) (it is a direct dependency).
+- A really fast, radix-tree based routing system that allows you to define routes in a declarative way.
+- A simple and powerful way to validate request parameters and JSON payloads using [typed](https://github.com/brielov/typed) (direct dependency).
 - Built-in error handling that automatically generates error responses for you.
-- Separation of concerns: write your http handlers in a modular way, and use the `createHandler` function to glue them together.
+- Separation of concerns: write your http handlers in a modular way, and use the `createHandler` function to glue them all together.
 - Type-safe request and response objects.
 
 Note that at the time of writing `resty` has not been fully tested in the real world and is not recommended for production use (yet). You can play around with it on small, personal projects and report any issues you find until it becomes stable enough to be taken seriously.
 
-As you see in some of the examples below, `resty` and [prisma](https://prisma.io) play very well together due to the nature of being type-safe and declarative.
+As you'll see in some of the examples below, `resty` and [prisma](https://prisma.io) play very well together due to the nature of being type-safe and declarative.
 
 ## Installation
 
@@ -27,23 +27,23 @@ import { createServer } from "http";
 import { get, post, createHandler, Response, HttpStatus } from "resty";
 import * as T from "typed";
 
-const postType = T.object({
+const movieType = T.object({
   title: T.string,
-  body: T.string,
+  year: T.number,
 });
 
-const getPosts = get("/posts", async () => {
-  const posts = await prisma.post.findMany();
-  return Response.json(posts);
+const getMovies = get("/movies", async () => {
+  const movies = await prisma.movie.findMany();
+  return Response.json(movies);
 });
 
-const createPost = post("/posts", async (request) => {
-  const data = await request.json(postType);
-  const post = await prisma.post.create({ data });
-  return Response.json(post, { status: HttpStatus.CREATED });
+const createMovie = post("/movies", async (request) => {
+  const data = await request.json(movieType);
+  const movie = await prisma.movie.create({ data });
+  return Response.json(movie, { status: HttpStatus.CREATED });
 });
 
-const handler = createHandler(getPosts, createPost);
+const handler = createHandler(getMovies, createMovie);
 const server = createServer(handler);
 
 server.listen(4000, () => console.log("Listening on port 4000"));
@@ -55,7 +55,7 @@ If you want to use global middlewares, you can combine `resty` with `connect`.
 
 ```typescript
 import { createServer } from "http";
-import { post, createHandler, Response, HttpStatus } from "resty";
+import { createHandler } from "resty";
 import connect from "connect";
 import logger from "morgan";
 import cors from "cors";
@@ -73,7 +73,7 @@ server.listen(4000, () => console.log("Listening on port 4000"));
 
 ## Authentication
 
-`resty` does not have built-in authentication / authorization. Instead, I recommend moving this logic to a separate helper function.
+`resty` does not have built-in authentication / authorization. Instead, it is recommended moving this logic to a separate helper function.
 
 ```typescript
 import { Request, HttpStatus, HttpError } from "resty";
@@ -127,11 +127,11 @@ const queryType = T.object({
   skip: T.defaulted(T.asNumber, 0),
 });
 
-const getMovies = get("/movies/:id/similar", async (request) => {
+const getMovieCast = get("/movies/:id/cast", async (request) => {
   // This is ensured by `queryType`. If anything goes wrong, a 400 "Bad Request" is returned.
   const { id, take, skip } = request.query(queryType); // => { id: 123, take: 5, skip: 0 }
-  const movies = await prisma.movie.findUnique({ where: { id }}).similar({ take, skip });
-  return Response.json(movies)
+  const cast = await prisma.movie.findUnique({ where: { id }}).cast({ take, skip });
+  return Response.json(cast)
 });
 ```
 
@@ -180,7 +180,7 @@ This won't even touch your server hard drives, it will stream the incoming file 
 ## Body size limits
 
 You can tell `resty` to limit the size of the body of a request. This is useful for preventing DoS attacks.
-If the body is larger than the limit, a 413 "Payload Too Large" error is returned. (Default is 10MB)
+If the body is larger than the limit, a 413 "Payload Too Large" error is returned. (Default is 2MB)
 
 ```typescript
 const postMovie = post("/movies", async (request) => {

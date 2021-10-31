@@ -28,7 +28,7 @@ describe("Request", () => {
   describe(".maxBodySize", () => {
     it("should have a default value of 10MB", () => {
       const req = build();
-      expect(req.maxBodySize).toBe(1024 * 1024 * 10);
+      expect(req.maxBodySize).toBe(1024 * 1024 * 2);
     });
 
     it("should allow setting numeric size", () => {
@@ -130,23 +130,17 @@ describe("Request", () => {
   describe(".json()", () => {
     const type = T.object({ foo: T.string });
 
-    it("should throw a 400 bad request error when malformed json", async () => {
+    it("should throw a 400 bad request error when bad json", () => {
+      expect.assertions(1);
+
       const req = build({
         method: "POST",
         buffer: Buffer.from('{"foo":"bar"'),
       });
 
-      let message = "";
-
-      try {
-        await req.json(type);
-      } catch (err) {
-        if (err instanceof HttpError) {
-          message = err.errors[0] as string;
-        }
-      }
-
-      expect(message).toEqual("Malformed JSON");
+      return expect(req.json(type)).rejects.toHaveProperty("errors", [
+        "Unexpected end of JSON input",
+      ]);
     });
 
     it("should throw 400 bad request error when validation fails", () => {
