@@ -1,12 +1,12 @@
 import bytes from "bytes";
 import type { IncomingHttpHeaders, IncomingMessage } from "http";
 import { ParsedUrlQuery, parse } from "querystring";
-import { Typed, fold } from "typed";
+import { Type } from "typed";
 import { Writable } from "stream";
 
 import { HttpError } from "./error";
 import { HttpStatus } from "./status";
-import { foldBadRequest, identity } from "./util";
+import { identity, throwBadRequest } from "./util";
 
 const DEFAULT_BODY_SIZE = 1024 * 1024 * 2;
 
@@ -39,8 +39,11 @@ export class Request {
   /**
    * Read and validate incoming query (it inclues route params)
    */
-  public query<T>(type: Typed<T>): T {
-    return fold(type(this.parsedUrlQuery), foldBadRequest, identity);
+  public query<T>(type: Type<T>): T {
+    return type(this.parsedUrlQuery).match({
+      Ok: identity,
+      Err: throwBadRequest,
+    });
   }
 
   /**
@@ -87,11 +90,11 @@ export class Request {
   /**
    * Read and validates Request's body as JSON
    */
-  public async json<T>(type: Typed<T>): Promise<T> {
+  public async json<T>(type: Type<T>): Promise<T> {
     const str = await this.text();
     try {
       const json = JSON.parse(str);
-      return fold(type(json), foldBadRequest, identity);
+      return type(json).match({ Ok: identity, Err: throwBadRequest });
     } catch (err) {
       if (err instanceof SyntaxError) {
         throw new HttpError(HttpStatus.BAD_REQUEST, [err.message]);
