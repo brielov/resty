@@ -43,7 +43,7 @@
     "bytes": "^3.1.1",
     "http-status-codes": "^2.2.0",
     "rsts": "^1.0.0",
-    "typed": "^2.1.0"
+    "typed": "^3.1.0"
   },
   "devDependencies": {
     "@types/bytes": "^3.1.1",
