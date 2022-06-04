@@ -1,0 +1,18 @@
+{
+  "name": "resty",
+  "version": "2.0.0",
+  "description": "A fast, tiny and easy to use router made exclusively for Cloudflare Workers",
+  "type": "module",
+  "main": "dist/index.mjs",
+  "scripts": {
+    "build": "tsc"
+  },
+  "keywords": [],
+  "author": "Gabriel Vaquer <brielov@icloud.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@cloudflare/workers-types": "^3.11.0",
+    "tsup": "^6.0.1",
+    "typescript": "^4.7.3"
+  }
+}
