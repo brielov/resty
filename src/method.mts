@@ -1,11 +1,13 @@
 export const METHODS = [
-  "GET",
-  "POST",
-  "PUT",
+  "CONNECT",
   "DELETE",
-  "PATCH",
+  "GET",
   "HEAD",
   "OPTIONS",
+  "PATCH",
+  "POST",
+  "PUT",
+  "TRACE",
 ] as const;
 
 export type Method = typeof METHODS[number];
